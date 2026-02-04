@@ -1,0 +1,267 @@
+@page "/register"
+@using LearnLineClient.Shared
+@using LearnLineClient.Services
+@using Microsoft.AspNetCore.Components.Web
+@inject TcpClientService TcpClient
+@inject NavigationManager Navigation
+
+<PageTitle>LearnLine - Inscription</PageTitle>
+
+<div class="auth-page">
+    <div class="container">
+        <div class="auth-container">
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- FORMULAIRE D'INSCRIPTION -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <div class="auth-card">
+                <div class="auth-header">
+                    <i class="fas fa-user-plus"></i>
+                    <h1>Inscription</h1>
+                    <p>Créez votre compte gratuitement</p>
+                </div>
+
+                <div class="auth-form">
+                    <!-- Nom complet -->
+                    <div class="form-group">
+                        <label for="name">
+                            <i class="fas fa-user"></i> Nom complet
+                        </label>
+                        <input 
+                            type="text" 
+                            id="name" 
+                            class="form-control" 
+                            placeholder="Votre nom complet"
+                            @bind="name" />
+                    </div>
+
+                    <!-- Email -->
+                    <div class="form-group">
+                        <label for="email">
+                            <i class="fas fa-envelope"></i> Email
+                        </label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            class="form-control" 
+                            placeholder="votre@email.com"
+                            @bind="email" />
+                    </div>
+
+                    <!-- Mot de passe -->
+                    <div class="form-group">
+                        <label for="password">
+                            <i class="fas fa-lock"></i> Mot de passe
+                        </label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            class="form-control" 
+                            placeholder="Minimum 6 caractères"
+                            @bind="password" />
+                    </div>
+                    <!-- Confirmation mot de passe -->
+                    <div class="form-group">
+                        <label for="confirmPassword">
+                            <i class="fas fa-lock"></i> Confirmer le mot de passe
+                        </label>
+                        <input 
+                            type="password" 
+                            id="confirmPassword" 
+                            class="form-control" 
+                            placeholder="Retapez votre mot de passe"
+                            @bind="confirmPassword"
+                            @onkeypress="HandleKeyPress" />
+                    </div>
+
+                    <!-- Message d'erreur -->
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i> @errorMessage
+                        </div>
+                    }
+
+                    <!-- Message de succès -->
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i> @successMessage
+                        </div>
+                    }
+
+                    <!-- Bouton d'inscription -->
+                    <button 
+                        class="btn-primary btn-block" 
+                        @onclick="HandleRegister"
+                        disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <i class="fas fa-spinner fa-spin"></i> <text>Inscription en cours...</text>
+                        }
+                        else
+                        {
+                            <i class="fas fa-user-plus"></i> <text>S'inscrire</text>
+                        }
+                    </button>
+
+                    <!-- Lien vers la connexion -->
+                    <div class="auth-footer">
+                        <p>Vous avez déjà un compte ?</p>
+                        <a href="/login" class="link-primary">
+                            <i class="fas fa-sign-in-alt"></i> Se connecter
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- ILLUSTRATION -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <div class="auth-illustration">
+                <i class="fas fa-rocket"></i>
+                <h2>Rejoignez LearnLine</h2>
+                <p>Commencez votre voyage d'apprentissage dès aujourd'hui</p>
+                <ul class="benefits-list">
+                    <li><i class="fas fa-check"></i> Accès illimité aux cours</li>
+                    <li><i class="fas fa-check"></i> Certificats de réussite</li>
+                    <li><i class="fas fa-check"></i> Communauté d'apprenants</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    // Variables du formulaire
+    private string name = string.Empty;
+    private string email = string.Empty;
+    private string password = string.Empty;
+    private string confirmPassword = string.Empty;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private bool isLoading = false;
+
+    /// <summary>
+    /// Gérer la touche Enter pour soumettre le formulaire
+    /// </summary>
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await HandleRegister();
+        }
+    }
+
+    /// <summary>
+    /// Gestion de l'inscription
+    /// </summary>
+    private async Task HandleRegister()
+    {
+        // Réinitialiser les messages
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        // Validation des champs
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            errorMessage = "Veuillez entrer votre nom";
+            return;
+        }
+
+        if (name.Length < 3)
+        {
+            errorMessage = "Le nom doit contenir au moins 3 caractères";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            errorMessage = "Veuillez entrer votre email";
+            return;
+        }
+
+        if (!IsValidEmail(email))
+        {
+            errorMessage = "Format d'email invalide";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            errorMessage = "Veuillez entrer un mot de passe";
+            return;
+        }
+
+        if (password.Length < 6)
+        {
+            errorMessage = "Le mot de passe doit contenir au moins 6 caractères";
+            return;
+        }
+
+        if (password != confirmPassword)
+        {
+            errorMessage = "Les mots de passe ne correspondent pas";
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            // Créer la requête d'inscription
+            var request = new TcpRequest
+            {
+                RequestType = "REGISTER",
+                Data = new
+                {
+                    Name = name.Trim(),
+                    Email = email.Trim(),
+                    Password = password
+                }
+            };
+
+            // Envoyer au serveur
+            var response = await TcpClient.SendRequestAsync(request);
+
+            if (response.Success)
+            {
+                successMessage = "Inscription réussie ! Redirection vers la page de connexion...";
+                StateHasChanged();
+
+                // Rediriger vers la page de connexion après 2 secondes
+                await Task.Delay(2000);
+                Navigation.NavigateTo("/login", true);
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors de l'inscription: {ex.Message}";
+            Console.WriteLine($"[REGISTER ERROR] {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Valider le format de l'email
+    /// </summary>
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+}

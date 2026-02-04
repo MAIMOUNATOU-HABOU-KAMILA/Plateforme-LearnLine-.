@@ -1,0 +1,135 @@
+﻿@using LearnLineClient.Services
+@inherits LayoutComponentBase
+@inject AppStateService AppState
+@inject NavigationManager Navigation
+@inject TcpClientService TcpClient
+@implements IDisposable
+
+<div class="page-container">
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- HEADER / MENU DE NAVIGATION -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <!-- Logo -->
+                <div class="logo" @onclick="NavigateHome">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>LearnLine</span>
+                </div>
+
+                <!-- Menu de navigation -->
+                <nav class="nav-menu">
+                    <a href="/" class="nav-link">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                    <a href="/about" class="nav-link">
+                        <i class="fas fa-info-circle"></i> About
+                    </a>
+                    <a href="/courses" class="nav-link">
+                        <i class="fas fa-book"></i> Courses
+                    </a>
+
+                    @if (AppState.IsLoggedIn)
+                    {
+                        <!-- Menu pour utilisateur connecté -->
+                        <a href="/chat" class="nav-link">
+                            <i class="fas fa-comments"></i> Chat
+                        </a>
+                        <a href="/statistics" class="nav-link">
+                            <i class="fas fa-chart-bar"></i> Stats
+                        </a>
+                        <div class="user-menu">
+                            <span class="user-name">
+                                <i class="fas fa-user-circle"></i> @AppState.GetCurrentUserName()
+                            </span>
+                            <button class="btn-logout" @onclick="HandleLogout">
+                                <i class="fas fa-sign-out-alt"></i> Déconnexion
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Menu pour invités -->
+                        <a href="/login" class="nav-link">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                        <a href="/register" class="nav-link btn-register">
+                            <i class="fas fa-user-plus"></i> Inscription
+                        </a>
+                    }
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- CONTENU PRINCIPAL -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <main class="main-content">
+        @Body
+    </main>
+
+    ═══════════════════════════════════════════════════════════ -->
+    <!-- FOOTER -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 LearnLine. Tous droits réservés. | Plateforme E-Learning Interactive</p>
+        </div>
+    </footer>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // S'abonner aux changements d'état
+        AppState.OnChange += StateHasChanged;
+    }
+
+    /// <summary>
+    /// Navigation vers la page d'accueil
+    /// </summary>
+    private void NavigateHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    /// <summary>
+    /// Gestion de la déconnexion
+    /// </summary>
+    private async Task HandleLogout()
+    {
+        try
+        {
+            // Envoyer la requête de déconnexion au serveur
+            var request = new TcpRequest
+            {
+                RequestType = "LOGOUT",
+                Data = new { UserId = AppState.GetCurrentUserId() }
+            };
+
+            var response = await TcpClient.SendRequestAsync(request);
+
+            // Déconnecter localement
+            AppState.Logout();
+
+            // Rediriger vers la page d'accueil
+            Navigation.NavigateTo("/", true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LOGOUT] Erreur: {ex.Message}");
+            AppState.Logout();
+            Navigation.NavigateTo("/", true);
+        }
+    }
+
+    /// <summary>
+    /// Nettoyage lors de la destruction du composant
+    /// </summary>
+    public void Dispose()
+    {
+        AppState.OnChange -= StateHasChanged;
+    }
+}

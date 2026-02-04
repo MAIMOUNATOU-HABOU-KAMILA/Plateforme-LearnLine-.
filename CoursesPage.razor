@@ -1,0 +1,160 @@
+@page "/courses"
+@using LearnLineClient.Shared
+@using LearnLineClient.Services
+@using Microsoft.AspNetCore.Components.Web
+@inject TcpClientService TcpClient
+@inject NavigationManager Navigation
+@inject AppStateService AppState
+
+<PageTitle>LearnLine - Cours</PageTitle>
+
+<div class="page-content">
+    <div class="container">
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- EN-TÊTE DE LA PAGE -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="page-header">
+            <h1><i class="fas fa-book"></i> Catalogue de Cours</h1>
+            <p class="page-subtitle">Découvrez nos cours et commencez à apprendre</p>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- CHARGEMENT -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        @if (isLoading)
+        {
+            <div class="loading-container">
+                <i class="fas fa-spinner fa-spin fa-3x"></i>
+                <p>Chargement des cours...</p>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <!-- Message d'erreur -->
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i> @errorMessage
+            </div>
+        }
+        else if (courses == null || courses.Count == 0)
+        {
+            <!-- Aucun cours disponible -->
+            <div class="empty-state">
+                <i class="fas fa-book-open fa-3x"></i>
+                <h3>Aucun cours disponible</h3>
+                <p>Les cours seront bientôt disponibles</p>
+            </div>
+        }
+        else
+        {
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- LISTE DES COURS -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <div class="courses-grid">
+                @foreach (var course in courses)
+                {
+                    <div class="course-card" @onclick="(() => NavigateToCourse(course.Id))">
+                        <!-- Image du cours -->
+                        <div class="course-thumbnail">
+                            @if (!string.IsNullOrEmpty(course.ThumbnailUrl))
+                            {
+                                <img src="@course.ThumbnailUrl" alt="@course.Title" />
+                            }
+                            else
+                            {
+                                <div class="course-placeholder">
+                                    <i class="fas fa-book-open"></i>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Informations du cours -->
+                        <div class="course-info">
+                            <h3 class="course-title">@course.Title</h3>
+                            <p class="course-description">@course.Description</p>
+
+                            <div class="course-meta">
+                                <span class="course-instructor">
+                                    <i class="fas fa-user-tie"></i> Formation LearnLine
+                                </span>
+                                <span class="course-duration">
+                                    <i class="fas fa-clock"></i> @course.EstimatedDurationMinutes min
+                                </span>
+                                <span class="course-chapters">
+                                    <i class="fas fa-list"></i> @course.Chapters.Count chapitres
+                                </span>
+                            </div>
+
+                            <button class="btn-primary btn-block">
+                                <i class="fas fa-play-circle"></i> Commencer le cours
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+@code {
+    private List<Course>? courses;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    /// <summary>
+    /// Charger les cours au démarrage de la page
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCourses();
+    }
+
+    /// <summary>
+    /// Charger la liste des cours depuis le serveur
+    /// </summary>
+    private async Task LoadCourses()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            // Créer la requête pour récupérer les cours
+            var request = new TcpRequest
+            {
+               RequestType = "GET_COURSES",
+                Data = null
+            };
+
+            // Envoyer au serveur
+            var response = await TcpClient.SendRequestAsync(request);
+
+            if (response.Success && response.Data != null)
+            {
+                // Désérialiser la liste des cours
+                courses = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Course>>(response.Data.ToString() ?? "[]");
+                Console.WriteLine($"[COURSES] {courses?.Count ?? 0} cours chargés");
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors du chargement des cours: {ex.Message}";
+            Console.WriteLine($"[COURSES ERROR] {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Navigation vers la page de détail d'un cours
+    /// </summary>
+    private void NavigateToCourse(string courseId)
+    {
+        Navigation.NavigateTo($"/course/{courseId}");
+    }
+}

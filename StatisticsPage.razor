@@ -1,0 +1,545 @@
+@page "/statistics"
+@inject TcpClientService TcpClient
+@inject AppStateService AppState
+@inject NavigationManager Navigation
+
+<PageTitle>LearnLine - Statistiques</PageTitle>
+
+<div class="page-content">
+    <div class="container">
+        @if (!AppState.IsLoggedIn)
+        {
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> Vous devez être connecté pour voir vos statistiques
+            </div>
+            <button class="btn-primary" @onclick="@(() => Navigation.NavigateTo("/login"))">
+                <i class="fas fa-sign-in-alt"></i> Se connecter
+            </button>
+        }
+        else
+        {
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- EN-TÊTE -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <div class="page-header">
+                <h1><i class="fas fa-chart-bar"></i> Mes Statistiques</h1>
+                <p class="page-subtitle">Suivez votre progression et vos résultats</p>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="loading-container">
+                    <i class="fas fa-spinner fa-spin fa-3x"></i>
+                    <p>Chargement de vos statistiques...</p>
+                </div>
+            }
+            else
+            {
+                <!-- ═══════════════════════════════════════════════════ -->
+                <!-- CARTES DE STATISTIQUES CLÉS -->
+                <!-- ═══════════════════════════════════════════════════ -->
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                        <div class="stat-details">
+                            <div class="stat-value">@coursesStarted</div>
+                            <div class="stat-label">Cours démarrés</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon success">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-details">
+                            <div class="stat-value">@coursesCompleted</div>
+                            <div class="stat-label">Cours terminés</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon warning">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div class="stat-details">
+                            <div class="stat-value">@testsCompleted</div>
+                            <div class="stat-label">Tests passés</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon primary">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="stat-details">
+                            <div class="stat-value">@averageScore%</div>
+                            <div class="stat-label">Score moyen</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon danger">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-details">
+                            <div class="stat-value">@totalTimeSpent h</div>
+                            <div class="stat-label">Temps total</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════ -->
+                <!-- PROGRESSION PAR COURS -->
+                <!-- ═══════════════════════════════════════════════════ -->
+                <div class="stats-section">
+                    <h2><i class="fas fa-chart-line"></i> Progression par Cours</h2>
+                    
+                    @if (courseProgress.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>Aucune progression enregistrée. Commencez un cours !</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="progress-chart">
+                            @foreach (var progress in courseProgress)
+                            {
+                                <div class="progress-item">
+                                    <div class="progress-info">
+                                        <div class="progress-course-title">@progress.CourseTitle</div>
+                                        <div class="progress-percentage">@progress.AverageProgress%</div>
+                                    </div>
+                                    <div class="progress-bar-horizontal">
+                                        <div class="progress-fill" style="@GetProgressWidth(progress.AverageProgress)"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════ -->
+                <!-- RÉSULTATS DES TESTS -->
+                <!-- ═══════════════════════════════════════════════════ -->
+                <div class="stats-section">
+                    <h2><i class="fas fa-chart-bar"></i> Résultats des Tests</h2>
+                    
+                    @if (testResults.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard"></i>
+                            <p>Aucun test passé pour le moment</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Graphique à barres -->
+                        <div class="bar-chart">
+                            @foreach (var result in testResults)
+                            {
+                                var barHeight = result.ScorePercentage;
+                                var barColor = result.ScorePercentage >= 80 ? "success" : 
+                                              result.ScorePercentage >= 50 ? "warning" : "danger";
+                                
+                                <div class="bar-item">
+                                    <div class="bar-container">
+                                        <div class="bar @barColor" style="@GetBarHeight(barHeight)">
+                                            <span class="bar-value">@result.ScorePercentage%</span>
+                                        </div>
+                                    </div>
+                                    <div class="bar-label">Test @(testResults.IndexOf(result) + 1)</div>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Tableau détaillé -->
+                        <div class="table-responsive">
+                            <table class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th><i class="fas fa-book"></i> Cours</th>
+                                        <th><i class="fas fa-bookmark"></i> Chapitre</th>
+                                        <th><i class="fas fa-star"></i> Score</th>
+                                        <th><i class="fas fa-calendar"></i> Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var result in testResults)
+                                    {
+                                        <tr>
+                                            <td>@result.CourseTitle</td>
+                                            <td>@result.ChapterTitle</td>
+                                            <td>
+                                                <span class="badge @(result.ScorePercentage >= 80 ? "badge-success" : 
+                                                                     result.ScorePercentage >= 50 ? "badge-warning" : "badge-danger")">
+                                                    @result.Score/@result.TotalQuestions (@result.ScorePercentage%)
+                                                </span>
+                                            </td>
+                                            <td>@result.CompletedDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<style>
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        transition: transform 0.3s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        background: var(--primary-color);
+    }
+
+    .stat-icon.success {
+        background: var(--secondary-color);
+    }
+
+    .stat-icon.warning {
+        background: var(--warning-color);
+    }
+
+    .stat-icon.danger {
+        background: var(--danger-color);
+    }
+
+    .stat-icon.primary {
+        background: var(--primary-color);
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--text-dark);
+    }
+
+    .stat-label {
+        color: var(--text-light);
+        font-size: 0.9rem;
+    }
+
+    .stats-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+
+    .stats-section h2 {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .progress-chart {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .progress-item {
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    .progress-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .progress-course-title {
+        font-weight: 500;
+        color: var(--text-dark);
+    }
+
+    .progress-percentage {
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+
+    .progress-bar-horizontal {
+        height: 30px;
+        background: var(--light-bg);
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        transition: width 0.5s;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding-right: 10px;
+        color: white;
+        font-weight: bold;
+    }
+
+    .bar-chart {
+        display: flex;
+        justify-content: space-around;
+        align-items: flex-end;
+        height: 300px;
+        padding: 1rem;
+        background: var(--light-bg);
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+
+    .bar-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-width: 80px;
+    }
+
+    .bar-container {
+        width: 100%;
+        height: 250px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+    }
+
+    .bar {
+        width: 100%;
+        border-radius: 5px 5px 0 0;
+        transition: height 0.5s;
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 5px;
+    }
+
+    .bar.success {
+        background: var(--secondary-color);
+    }
+
+    .bar.warning {
+        background: var(--warning-color);
+    }
+
+    .bar.danger {
+        background: var(--danger-color);
+    }
+
+    .bar-value {
+        color: white;
+        font-weight: bold;
+        font-size: 0.85rem;
+    }
+
+    .bar-label {
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+        color: var(--text-light);
+        text-align: center;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .stats-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .stats-table th,
+    .stats-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .stats-table th {
+        background: var(--light-bg);
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+
+    .stats-table tbody tr:hover {
+        background: var(--light-bg);
+    }
+
+    .badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: bold;
+    }
+
+    .badge-success {
+        background: var(--secondary-color);
+        color: white;
+    }
+
+    .badge-warning {
+        background: var(--warning-color);
+        color: white;
+    }
+
+    .badge-danger {
+        background: var(--danger-color);
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 0;
+        color: var(--text-light);
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+</style>
+
+@code {
+    private bool isLoading = true;
+    private int coursesStarted = 0;
+    private int coursesCompleted = 0;
+    private int testsCompleted = 0;
+    private int averageScore = 0;
+    private int totalTimeSpent = 0;
+
+    private List<CourseProgressSummary> courseProgress = new();
+    private List<TestResultSummary> testResults = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AppState.IsLoggedIn)
+        {
+            await LoadStatistics();
+        }
+    }
+
+    private async Task LoadStatistics()
+    {
+        try
+        {
+            isLoading = true;
+
+            var request = new TcpRequest
+            {
+                RequestType = "GET_STATISTICS",
+                Data = new { UserId = AppState.GetCurrentUserId() }
+            };
+
+            var response = await TcpClient.SendRequestAsync(request);
+
+            if (response.Success && response.Data != null)
+            {
+                var stats = Newtonsoft.Json.JsonConvert.DeserializeObject<UserStatistics>(response.Data.ToString() ?? "{}");
+                
+                if (stats != null)
+                {
+                    coursesStarted = stats.CoursesStarted;
+                    coursesCompleted = stats.CoursesCompleted;
+                    testsCompleted = stats.TestsCompleted;
+                    averageScore = stats.AverageScore;
+                    totalTimeSpent = stats.TotalTimeSpent;
+                    courseProgress = stats.CourseProgress;
+                    testResults = stats.TestResults;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[STATISTICS ERROR] {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // Classes pour les statistiques
+    private class UserStatistics
+    {
+        public int CoursesStarted { get; set; }
+        public int CoursesCompleted { get; set; }
+        public int TestsCompleted { get; set; }
+        public int AverageScore { get; set; }
+        public int TotalTimeSpent { get; set; }
+        public List<CourseProgressSummary> CourseProgress { get; set; } = new();
+        public List<TestResultSummary> TestResults { get; set; } = new();
+    }
+
+    private class CourseProgressSummary
+    {
+        public string CourseTitle { get; set; } = string.Empty;
+        public int AverageProgress { get; set; }
+    }
+
+    private class TestResultSummary
+    {
+        public string CourseTitle { get; set; } = string.Empty;
+        public string ChapterTitle { get; set; } = string.Empty;
+        public int Score { get; set; }
+        public int TotalQuestions { get; set; }
+        public int ScorePercentage => TotalQuestions > 0 ? (Score * 100 / TotalQuestions) : 0;
+        public DateTime CompletedDate { get; set; }
+    }
+    @code {
+    // ... votre code existant ...
+
+    /// <summary>
+    /// Génère le style pour la largeur de la barre de progression
+    /// </summary>
+    private string GetProgressWidth(int progress)
+    {
+        return $"width: {progress}%";
+    }
+
+    /// <summary>
+    /// Génère le style pour la hauteur de la barre
+    /// </summary>
+    private string GetBarHeight(int height)
+    {
+        return $"height: {height}%";
+    }
+}
+}

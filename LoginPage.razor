@@ -1,0 +1,237 @@
+@page "/login"
+@using LearnLineClient.Shared
+@using Microsoft.AspNetCore.Components.Web
+@using LearnLineClient.Services
+@inject TcpClientService TcpClient
+@inject AppStateService AppState
+@inject NavigationManager Navigation
+
+<PageTitle>LearnLine - Connexion</PageTitle>
+
+<div class="auth-page">
+    <div class="container">
+        <div class="auth-container">
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- FORMULAIRE DE CONNEXION -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <div class="auth-card">
+                <div class="auth-header">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <h1>Connexion</h1>
+                    <p>Connectez-vous pour accéder à vos cours</p>
+                </div>
+
+                <div class="auth-form">
+                    <!-- Email -->
+                    <div class="form-group">
+                        <label for="email">
+                            <i class="fas fa-envelope"></i> Email
+                        </label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            class="form-control" 
+                            placeholder="votre@email.com"
+                            @bind="email"
+                            @onkeypress="HandleKeyPress" />
+                    </div>
+
+                    <!-- Mot de passe -->
+                    <div class="form-group">
+                        <label for="password">
+                            <i class="fas fa-lock"></i> Mot de passe
+                        </label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            class="form-control" 
+                            placeholder="Votre mot de passe"
+                            @bind="password"
+                            @onkeypress="HandleKeyPress" />
+                    </div>
+
+                    <!-- Message d'erreur -->
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i> @errorMessage
+                        </div>
+                    }
+
+                    <!-- Message de succès -->
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i> @successMessage
+                        </div>
+                    }
+
+                    <!-- Bouton de connexion -->
+                    <button 
+                        class="btn-primary btn-block" 
+                        @onclick="HandleLogin"
+                        disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <i class="fas fa-spinner fa-spin"></i> <text>Connexion en cours...</text>
+                        }
+                        else
+                        {
+                            <i class="fas fa-sign-in-alt"></i> <text>Se connecter</text>
+                        }
+                    </button>
+
+                    <!-- Lien vers l'inscription -->
+                    <div class="auth-footer">
+                        <p>Vous n'avez pas de compte ?</p>
+                        <a href="/register" class="link-primary">
+                            <i class="fas fa-user-plus"></i> S'inscrire maintenant
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+           <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- ILLUSTRATION -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <div class="auth-illustration">
+                <i class="fas fa-graduation-cap"></i>
+                <h2>Bienvenue sur LearnLine</h2>
+                <p>Accédez à vos cours et continuez votre apprentissage</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Variables du formulaire
+    private string email = string.Empty;
+    private string password = string.Empty;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private bool isLoading = false;
+
+    /// <summary>
+    /// Vérifier si l'utilisateur est déjà connecté
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        if (AppState.IsLoggedIn)
+        {
+            Navigation.NavigateTo("/courses");
+        }
+    }
+
+    /// <summary>
+    /// Gérer la touche Enter pour soumettre le formulaire
+    /// </summary>
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await HandleLogin();
+        }
+    }
+
+    /// <summary>
+    /// Gestion de la connexion
+    /// </summary>
+    private async Task HandleLogin()
+    {
+        // Réinitialiser les messages
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        // Validation des champs
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            errorMessage = "Veuillez entrer votre email";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            errorMessage = "Veuillez entrer votre mot de passe";
+            return;
+        }
+
+        if (!IsValidEmail(email))
+        {
+            errorMessage = "Format d'email invalide";
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            // Créer la requête de connexion
+            var request = new TcpRequest
+            {
+               RequestType = "LOGIN",
+                Data = new
+                {
+                    Email = email.Trim(),
+                    Password = password
+                }
+            };
+
+// Envoyer au serveur
+            var response = await TcpClient.SendRequestAsync(request);
+
+            if (response.Success)
+            {
+                // Récupérer les données de l'utilisateur
+                var userData = Newtonsoft.Json.JsonConvert.DeserializeObject<User>(response.Data?.ToString() ?? "{}");
+
+                if (userData != null)
+                {
+                    // Enregistrer l'utilisateur dans l'état global
+                    AppState.SetLoggedInUser(userData);
+
+                    successMessage = "Connexion réussie ! Redirection...";
+                    StateHasChanged();
+
+                    // Rediriger vers les cours après 1 seconde
+                    await Task.Delay(1000);
+                    Navigation.NavigateTo("/courses", true);
+                }
+                else
+                {
+                    errorMessage = "Erreur lors de la récupération des données utilisateur";
+                }
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur de connexion: {ex.Message}";
+            Console.WriteLine($"[LOGIN ERROR] {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Valider le format de l'email
+    /// </summary>
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+}

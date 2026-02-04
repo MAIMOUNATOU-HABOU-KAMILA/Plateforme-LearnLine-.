@@ -1,0 +1,487 @@
+@page "/chat"
+@using LearnLineClient.Services
+@using LearnLineClient.Shared
+@using Microsoft.AspNetCore.Components.Web
+@inject TcpClientService TcpClient
+@inject AppStateService AppState
+@inject NavigationManager Navigation
+
+<PageTitle>LearnLine - Chat</PageTitle>
+
+<div class="page-content">
+    <div class="container">
+        @if (!AppState.IsLoggedIn)
+        {
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> Vous devez être connecté pour accéder au chat
+            </div>
+            <button class="btn-primary" @onclick="@(() => Navigation.NavigateTo("/login"))">
+                <i class="fas fa-sign-in-alt"></i> Se connecter
+            </button>
+        }
+        else
+        {
+            <div class="chat-page">
+                <!-- ═══════════════════════════════════════════════════ -->
+                <!-- LISTE DES UTILISATEURS CONNECTÉS -->
+                <!-- ═══════════════════════════════════════════════════ -->
+                <div class="chat-sidebar">
+                    <h3><i class="fas fa-users"></i> Utilisateurs Connectés</h3>
+                    
+                    @if (isLoadingUsers)
+                    {
+                        <div class="loading-users">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Chargement...</p>
+                        </div>
+                    }
+                    else if (connectedUsers.Count == 0)
+                    {
+                        <p class="no-users">Aucun autre utilisateur connecté</p>
+                    }
+                    else
+                    {
+                        <div class="users-list">
+                            @foreach (var user in connectedUsers)
+                            {
+                                <div class="user-item @(selectedUser?.UserId == user.UserId ? "active" : "")"
+                                     @onclick="@(() => SelectUser(user))">
+                                    <i class="fas fa-user-circle"></i>
+                                    <div class="user-info">
+                                        <div class="user-name">@user.Name</div>
+                                        <div class="user-status">
+                                            <i class="fas fa-circle online"></i> En ligne
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    
+                    <button class="btn-secondary btn-block" @onclick="RefreshUsers">
+                        <i class="fas fa-sync"></i> Actualiser
+                    </button>
+                </div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+                <!-- ZONE DE CONVERSATION -->
+                <!-- ═══════════════════════════════════════════════════ -->
+                <div class="chat-main">
+                    @if (selectedUser == null)
+                    {
+                        <div class="chat-placeholder">
+                            <i class="fas fa-comments fa-4x"></i>
+                            <h3>Sélectionnez un utilisateur</h3>
+                            <p>Choisissez un utilisateur dans la liste pour commencer une conversation</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- En-tête de conversation -->
+                        <div class="chat-header">
+                            <div class="chat-user-info">
+                                <i class="fas fa-user-circle fa-2x"></i>
+                                <div>
+                                    <h3>@selectedUser.Name</h3>
+                                    <p><i class="fas fa-circle online"></i> En ligne</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Messages -->
+                        <div class="chat-messages" @ref="messagesContainer">
+                            @if (messages.Count == 0)
+                            {
+                                <div class="no-messages">
+                                    <i class="fas fa-inbox"></i>
+                                    <p>Aucun message. Commencez la conversation !</p>
+                                </div>
+                            }
+                            else
+                            {
+                                @foreach (var message in messages)
+                                {
+                                    var isOwnMessage = message.SenderId == AppState.GetCurrentUserId();
+                                    <div class="message @(isOwnMessage ? "own-message" : "other-message")">
+                                        <div class="message-content">
+                                            <div class="message-author">@message.SenderName</div>
+                                            <div class="message-text">@message.MessageText</div>
+                                            <div class="message-time">@message.Timestamp.ToString("HH:mm")</div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+
+                        <!-- Zone de saisie -->
+                        <div class="chat-input">
+                            <input type="text" 
+                                   class="message-input" 
+                                   placeholder="Tapez votre message..."
+                                   @bind="newMessage"
+                                   @onkeypress="HandleKeyPress" />
+                            <button class="btn-send" @onclick="SendMessage" disabled="@string.IsNullOrWhiteSpace(newMessage)">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .chat-page {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 1rem;
+        height: calc(100vh - 200px);
+    }
+
+    .chat-sidebar {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-sidebar h3 {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .users-list {
+        flex: 1;
+        overflow-y: auto;
+        margin-bottom: 1rem;
+    }
+
+    .user-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-bottom: 0.5rem;
+    }
+
+    .user-item:hover {
+        background: var(--light-bg);
+    }
+
+    .user-item.active {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .user-item i {
+        font-size: 2rem;
+    }
+
+    .user-info {
+        flex: 1;
+    }
+
+    .user-name {
+        font-weight: 500;
+    }
+
+    .user-status {
+        font-size: 0.85rem;
+        opacity: 0.8;
+    }
+
+    .online {
+        color: var(--secondary-color);
+        font-size: 0.6rem;
+    }
+
+    .chat-main {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-placeholder {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-light);
+    }
+
+    .chat-header {
+        padding: 1.5rem;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .chat-user-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .chat-messages {
+        flex: 1;
+        padding: 1.5rem;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .message {
+        display: flex;
+    }
+
+    .own-message {
+        justify-content: flex-end;
+    }
+
+    .other-message {
+        justify-content: flex-start;
+    }
+
+    .message-content {
+        max-width: 70%;
+        padding: 1rem;
+        border-radius: 10px;
+    }
+
+    .own-message .message-content {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .other-message .message-content {
+        background: var(--light-bg);
+    }
+
+    .message-author {
+        font-weight: 500;
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .message-text {
+        margin-bottom: 0.25rem;
+    }
+
+    .message-time {
+        font-size: 0.75rem;
+        opacity: 0.7;
+    }
+
+    .chat-input {
+        padding: 1.5rem;
+        border-top: 2px solid var(--border-color);
+        display: flex;
+        gap: 1rem;
+    }
+
+    .message-input {
+        flex: 1;
+        padding: 0.75rem;
+        border: 2px solid var(--border-color);
+        border-radius: 25px;
+        font-size: 1rem;
+    }
+
+    .message-input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    .btn-send {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: none;
+        background: var(--primary-color);
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .btn-send:hover:not(:disabled) {
+        background: var(--primary-dark);
+        transform: scale(1.1);
+    }
+
+    .btn-send:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    @@media (max-width: 768px) {
+        .chat-page {
+            grid-template-columns: 1fr;
+        }
+
+        .chat-sidebar {
+            height: 300px;
+        }
+    }
+</style>
+
+@code {
+    private ElementReference messagesContainer;
+    private List<User> connectedUsers = new();
+    private List<ChatMessage> messages = new();
+    private User? selectedUser;
+    private string newMessage = string.Empty;
+    private bool isLoadingUsers = true;
+    private System.Threading.Timer? refreshTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AppState.IsLoggedIn)
+        {
+            await LoadConnectedUsers();
+            StartAutoRefresh();
+        }
+    }
+
+    private async Task LoadConnectedUsers()
+    {
+        try
+        {
+            isLoadingUsers = true;
+            var request = new TcpRequest
+            {
+                RequestType = "GET_CONNECTED_USERS",
+                Data = new { CurrentUserId = AppState.GetCurrentUserId() }
+            };
+
+            var response = await TcpClient.SendRequestAsync(request);
+
+            if (response.Success && response.Data != null)
+            {
+                connectedUsers = Newtonsoft.Json.JsonConvert.DeserializeObject<List<User>>(response.Data.ToString() ?? "[]") ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CHAT ERROR] {ex.Message}");
+        }
+        finally
+        {
+            isLoadingUsers = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SelectUser(User user)
+    {
+        selectedUser = user;
+        await LoadMessages();
+    }
+
+    private async Task LoadMessages()
+    {
+        if (selectedUser == null) return;
+
+        try
+        {
+            var request = new TcpRequest
+            {
+                RequestType = "GET_MESSAGES",
+                Data = new
+                {
+                    UserId1 = AppState.GetCurrentUserId(),
+                    UserId2 = selectedUser.UserId
+                }
+            };
+
+            var response = await TcpClient.SendRequestAsync(request);
+
+            if (response.Success && response.Data != null)
+            {
+                messages = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ChatMessage>>(response.Data.ToString() ?? "[]") ?? new();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LOAD MESSAGES ERROR] {ex.Message}");
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(newMessage) || selectedUser == null) return;
+
+        try
+        {
+            var request = new TcpRequest
+            {
+                RequestType = "SEND_MESSAGE",
+                Data = new
+                {
+                    SenderId = AppState.GetCurrentUserId(),
+                    SenderName = AppState.GetCurrentUserName(),
+                    ReceiverId = selectedUser.UserId,
+                    ReceiverName = selectedUser.Name,
+                    MessageText = newMessage.Trim()
+                }
+            };
+
+            var response = await TcpClient.SendRequestAsync(request);
+
+            if (response.Success)
+            {
+                newMessage = string.Empty;
+                await LoadMessages();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SEND MESSAGE ERROR] {ex.Message}");
+        }
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendMessage();
+        }
+    }
+
+    private async Task RefreshUsers()
+    {
+        await LoadConnectedUsers();
+        if (selectedUser != null)
+        {
+            await LoadMessages();
+        }
+    }
+
+    private void StartAutoRefresh()
+    {
+        refreshTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                if (selectedUser != null)
+                {
+                    await LoadMessages();
+                }
+            });
+        }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+    }
+
+    public void Dispose()
+    {
+        refreshTimer?.Dispose();
+    }
+}

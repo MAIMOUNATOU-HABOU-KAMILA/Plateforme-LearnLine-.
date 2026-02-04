@@ -1,0 +1,154 @@
+@page "/"
+@using Microsoft.AspNetCore.Components.Web
+@inject NavigationManager Navigation
+
+<PageTitle>LearnLine - Accueil</PageTitle>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION HERO -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="hero-section">
+    <div class="container">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                <i class="fas fa-graduation-cap"></i>
+                Bienvenue sur LearnLine
+            </h1>
+            <p class="hero-subtitle">
+                Votre plateforme d'apprentissage en ligne nouvelle génération
+            </p>
+            <p class="hero-description">
+                Accédez à des cours de qualité, suivez votre progression en temps réel,
+                échangez avec d'autres apprenants et obtenez vos certifications !
+            </p>
+            <div class="hero-buttons">
+                <button class="btn-primary btn-large" @onclick="NavigateToCourses">
+                    <i class="fas fa-book-open"></i> Explorer les cours
+                </button>
+                <button class="btn-secondary btn-large" @onclick="NavigateToRegister">
+                    <i class="fas fa-user-plus"></i> S'inscrire gratuitement
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION FONCTIONNALITÉS -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="features-section">
+    <div class="container">
+        <h2 class="section-title">Pourquoi choisir LearnLine ?</h2>
+        
+        <div class="features-grid">
+            <!-- Fonctionnalité 1 -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-video"></i>
+                </div>
+                <h3>Cours Vidéo HD</h3>
+                <p>Des vidéos de haute qualité pour un apprentissage optimal</p>
+            </div>
+
+            <!-- Fonctionnalité 2 -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3>Suivi de Progression</h3>
+                <p>Suivez votre avancement en temps réel avec des statistiques détaillées</p>
+            </div>
+
+            <!-- Fonctionnalité 3 -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <h3>Tests & Quiz</h3>
+                <p>Évaluez vos connaissances avec des quiz interactifs</p>
+            </div>
+
+            <!-- Fonctionnalité 4 -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <h3>Chat en Direct</h3>
+                <p>Communiquez avec les autres apprenants en temps réel</p>
+            </div>
+
+            <!-- Fonctionnalité 5 -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-certificate"></i>
+                </div>
+                <h3>Certifications</h3>
+                <p>Obtenez des certificats reconnus à la fin de chaque cours</p>
+            </div>
+
+            <!-- Fonctionnalité 6 -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h3>Disponible 24/7</h3>
+                <p>Apprenez à votre rythme, où que vous soyez, quand vous voulez</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION STATISTIQUES -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="stats-section">
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">1000+</div>
+                <div class="stat-label">Étudiants</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">50+</div>
+                <div class="stat-label">Cours</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">95%</div>
+                <div class="stat-label">Satisfaction</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">24/7</div>
+                <div class="stat-label">Support</div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION CALL TO ACTION -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="cta-section">
+    <div class="container">
+        <h2>Prêt à commencer votre apprentissage ?</h2>
+        <p>Rejoignez des milliers d'étudiants qui développent leurs compétences avec LearnLine</p>
+        <button class="btn-primary btn-large" @onclick="NavigateToRegister">
+            <i class="fas fa-rocket"></i> Commencer maintenant
+        </button>
+    </div>
+</div>
+@code {
+    /// <summary>
+    /// Navigation vers la page des cours
+    /// </summary>
+    private void NavigateToCourses()
+    {
+        Navigation.NavigateTo("/courses");
+    }
+
+    /// <summary>
+    /// Navigation vers la page d'inscription
+    /// </summary>
+    private void NavigateToRegister()
+    {
+        Navigation.NavigateTo("/register");
+    }
+}

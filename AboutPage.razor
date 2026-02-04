@@ -1,0 +1,160 @@
+@page "/about"
+@using Microsoft.AspNetCore.Components.Web
+
+<PageTitle>LearnLine - À propos</PageTitle>
+
+<div class="page-content">
+    <div class="container">
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- EN-TÊTE DE LA PAGE -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="page-header">
+            <h1><i class="fas fa-info-circle"></i> À propos de LearnLine</h1>
+            <p class="page-subtitle">Découvrez notre plateforme d'apprentissage en ligne</p>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- SECTION MISSION -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="about-section">
+            <h2><i class="fas fa-bullseye"></i> Notre Mission</h2>
+            <p class="about-text">
+                LearnLine est une plateforme d'e-learning moderne et interactive qui vise à rendre 
+                l'éducation accessible à tous, partout et à tout moment. Notre mission est de fournir 
+                des cours de haute qualité qui permettent à chacun de développer ses compétences et 
+                d'atteindre ses objectifs professionnels.
+            </p>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- SECTION VALEURS -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="about-section">
+            <h2><i class="fas fa-heart"></i> Nos Valeurs</h2>
+            <div class="values-grid">
+                <div class="value-card">
+                    <div class="value-icon">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <h3>Excellence</h3>
+                    <p>Des cours de qualité créés par des experts</p>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3>Communauté</h3>
+                    <p>Un espace d'échange et de collaboration</p>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-icon">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <h3>Innovation</h3>
+                    <p>Technologies modernes pour une meilleure expérience</p>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-icon">
+                        <i class="fas fa-hand-holding-heart"></i>
+                    </div>
+                    <h3>Accessibilité</h3>
+                    <p>Éducation de qualité accessible à tous</p>
+                </div>
+            </div>
+        </div>
+
+       ═══════════════════════════════════════════════════════════ -->
+        <!-- SECTION ARCHITECTURE TECHNIQUE -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="about-section">
+            <h2><i class="fas fa-cogs"></i> Architecture Technique</h2>
+            <p class="about-text">
+                LearnLine utilise une architecture client-serveur moderne basée sur :
+            </p>
+            <ul class="tech-list">
+                <li><i class="fas fa-check-circle"></i> <strong>Blazor Server</strong> pour l'interface utilisateur interactive</li>
+                <li><i class="fas fa-check-circle"></i> <strong>SignalR</strong> pour la communication en temps réel</li>
+                <li><i class="fas fa-check-circle"></i> <strong>TCP/IP</strong> pour la communication client-serveur</li>
+                <li><i class="fas fa-check-circle"></i> <strong>.NET 8.0</strong> pour les performances optimales</li>
+                <li><i class="fas fa-check-circle"></i> <strong>JSON</strong> pour le stockage des données</li>
+            </ul>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- SECTION FONCTIONNALITÉS -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="about-section">
+            <h2><i class="fas fa-star"></i> Fonctionnalités Principales</h2>
+            <div class="features-list">
+                <div class="feature-item">
+                    <i class="fas fa-video"></i>
+                    <div>
+                        <h4>Cours Vidéo Interactifs</h4>
+                        <p>Vidéos HD avec suivi de progression en temps réel</p>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <i class="fas fa-clipboard-check"></i>
+                    <div>
+                        <h4>Tests & Évaluations</h4>
+                        <p>Quiz automatisés avec correction instantanée</p>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <div>
+                        <h4>Statistiques Détaillées</h4>
+                        <p>Tableaux de bord et graphiques de progression</p>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <i class="fas fa-comments"></i>
+                    <div>
+                        <h4>Chat en Temps Réel</h4>
+                        <p>Communication instantanée entre étudiants</p>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <i class="fas fa-network-wired"></i>
+                    <div>
+                        <h4>Multi-utilisateurs</h4>
+                        <p>Support de connexions simultanées sur réseau local</p>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <i class="fas fa-database"></i>
+                    <div>
+                        <h4>Sauvegarde Automatique</h4>
+                        <p>Toutes vos données sont enregistrées en temps réel</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- SECTION CONTACT -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="about-section contact-section">
+            <h2><i class="fas fa-envelope"></i> Nous Contacter</h2>
+            <p class="about-text">
+                Pour toute question ou suggestion, n'hésitez pas à nous contacter :
+            </p>
+            <div class="contact-info">
+                <p><i class="fas fa-envelope"></i> <strong>Email:</strong> contact@learnline.com</p>
+                <p><i class="fas fa-globe"></i> <strong>Web:</strong> www.learnline.com</p>
+                <p><i class="fas fa-map-marker-alt"></i> <strong>Adresse:</strong> 123 Rue de l'Éducation, Paris, France</p>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    // Aucun code nécessaire pour cette page statique
+}

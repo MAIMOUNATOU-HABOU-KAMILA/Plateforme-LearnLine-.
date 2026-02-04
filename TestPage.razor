@@ -1,0 +1,460 @@
+@page "/course/{CourseId}/chapter/{ChapterId}/quiz"
+@using LearnLineClient.Services
+@using LearnLineClient.Shared
+@using Microsoft.AspNetCore.Components.Web
+@inject TcpClientService TcpClient
+@inject NavigationManager Navigation
+@inject AppStateService AppState
+
+<PageTitle>LearnLine - Quiz</PageTitle>
+
+<div class="page-content">
+    <div class="container">
+        @if (isLoading)
+        {
+            <div class="loading-container">
+                <i class="fas fa-spinner fa-spin fa-3x"></i>
+                <p>Chargement du quiz...</p>
+            </div>
+        }
+        else if (quiz == null || quiz.Questions.Count == 0)
+        {
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> Aucun quiz disponible pour ce chapitre
+            </div>
+            <div>
+            <button class="btn-primary" @onclick="BackToChapter">
+                    <!-- ═══════════════════════════════════════════════ -->
+                    <!-- QUESTIONS DU QUIZ -->
+                    <!-- ═══════════════════════════════════════════════ -->
+                    <div class="questions-list">
+                        @for (int i = 0; i < quiz!.Questions.Count; i++)
+                        {
+                            var question = quiz.Questions[i];
+                            var questionIndex = i;
+
+                            <div class="question-card">
+                                <h3 class="question-text">
+                                    Question @(i + 1) : @question.QuestionText
+                                </h3>
+
+                                <div class="options-list">
+                                    @for (int j = 0; j < question.Options.Count; j++)
+                                    {
+                                        var optionIndex = j;
+                                        var optionLetter = ((char)('A' + j)).ToString();
+                                        var isSelected = userAnswers.ContainsKey(questionIndex) && userAnswers[questionIndex] == optionIndex;
+
+                                        <div class="option-item @(isSelected ? "selected" : "")" 
+                                             @onclick="@(() => SelectAnswer(questionIndex, optionIndex))">
+                                            <div class="option-letter">@optionLetter</div>
+                                            <div class="option-text">@question.Options[j]</div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Bouton de soumission -->
+                    <div class="quiz-actions">
+                       <button class="btn-primary btn-large" 
+        @onclick="SubmitQuiz" 
+        disabled="@IsQuizSubmitDisabled()">
+                            @if (isSubmitting)
+                            {
+                                <i class="fas fa-spinner fa-spin"></i> <text>Envoi en cours...</text>
+                            }
+                            else
+                            {
+                                <i class="fas fa-paper-plane"></i> <text>Soumettre mes réponses</text>
+                            }
+                        </button>
+                        @if (userAnswers.Count < quiz.Questions.Count)
+                        {
+                            <p class="text-warning">Veuillez répondre à toutes les questions (@userAnswers.Count/@quiz.Questions.Count)</p>
+                        }
+                    </div>
+                }
+                else
+                {
+               <!-- ═══════════════════════════════════════════════ -->
+                    <!-- RÉSULTATS DU QUIZ -->
+                    <!-- ═══════════════════════════════════════════════ -->
+                    <div class="quiz-results">
+                        <div class="results-header">
+                            <h2>
+                                @if (scorePercentage >= 80)
+                                {
+                                    <i class="fas fa-trophy" style="color: gold;"></i> <text>Excellent !</text>
+                                }
+                                else if (scorePercentage >= 50)
+                                {
+                                    <i class="fas fa-thumbs-up" style="color: var(--secondary-color);"></i> <text>Bien joué !</text>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-redo" style="color: var(--warning-color);"></i> <text>Continuez vos efforts !</text>
+                                }
+                            </h2>
+                            <div class="score-display">
+                                <div class="score-number">@score / @quiz.Questions.Count</div>
+                                <div class="score-percentage">@scorePercentage%</div>
+                            </div>
+                        </div>
+
+                      -- Réponses détaillées -->
+                        <div class="answers-review">
+                            <h3>Révision de vos réponses</h3>
+                            @for (int i = 0; i < quiz.Questions.Count; i++)
+                            {
+                                var question = quiz.Questions[i];
+                                var userAnswer = userAnswers[i];
+                                var isCorrect = userAnswer == question.CorrectAnswerIndex;
+
+                                <div class="answer-review-card @(isCorrect ? "correct" : "incorrect")">
+                                    <div class="review-header">
+                                        <h4>Question @(i + 1)</h4>
+                                        @if (isCorrect)
+                                        {
+                                            <span class="badge badge-success"><i class="fas fa-check"></i> Correct</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-danger"><i class="fas fa-times"></i> Incorrect</span>
+                                        }
+                                    </div>
+                                    <p class="review-question">@question.QuestionText</p>
+                                    <p class="review-your-answer">
+                                        <strong>Votre réponse :</strong> 
+                                        @((char)('A' + userAnswer)). @question.Options[userAnswer]
+                                    </p>
+                                    @if (!isCorrect)
+                                    {
+                                        <p class="review-correct-answer">
+                                            <strong>Bonne réponse :</strong> 
+                                            @((char)('A' + question.CorrectAnswerIndex)). @question.Options[question.CorrectAnswerIndex]
+                                        </p>
+                                    }
+                                    <p class="review-explanation">
+                                        <i class="fas fa-lightbulb"></i> <strong>Explication :</strong> @question.Explanation
+                                    </p>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Actions finales -->
+                        <div class="quiz-actions">
+                            <button class="btn-primary" @onclick="BackToChapter">
+                                <i class="fas fa-arrow-left"></i> Retour au chapitre
+                            </button>
+                            <button class="btn-secondary" @onclick="RetakeQuiz">
+                                <i class="fas fa-redo"></i> Repasser le quiz
+                            </button>
+                        </div>
+                    </div>
+                }
+                 </button>
+            </div>
+       
+        }
+    </div>
+</div>
+
+<style>
+    .quiz-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .quiz-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .quiz-header h1 {
+        font-size: 2rem;
+        margin: 1rem 0 0.5rem;
+    }
+
+    .question-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+
+    .question-text {
+        margin-bottom: 1.5rem;
+        color: var(--text-dark);
+    }
+
+    .options-list {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .option-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .option-item:hover {
+        border-color: var(--primary-color);
+        background: #f0f7ff;
+    }
+
+    .option-item.selected {
+        border-color: var(--primary-color);
+        background: #e3f2fd;
+    }
+
+    .option-letter {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+
+    .quiz-actions {
+        text-align: center;
+        padding: 2rem 0;
+    }
+
+    .text-warning {
+        color: var(--warning-color);
+        margin-top: 1rem;
+    }
+
+    .quiz-results {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .results-header {
+        text-align: center;
+        margin-bottom: 3rem;
+        padding-bottom: 2rem;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .score-display {
+        margin-top: 1.5rem;
+    }
+
+    .score-number {
+        font-size: 3rem;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+
+    .score-percentage {
+        font-size: 2rem;
+        color: var(--secondary-color);
+    }
+
+    .answers-review h3 {
+        margin-bottom: 1.5rem;
+    }
+
+    .answer-review-card {
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid;
+    }
+
+    .answer-review-card.correct {
+        background: #d4edda;
+        border-color: var(--secondary-color);
+    }
+
+    .answer-review-card.incorrect {
+        background: #f8d7da;
+        border-color: var(--danger-color);
+    }
+
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: bold;
+    }
+
+    .badge-success {
+        background: var(--secondary-color);
+        color: white;
+    }
+
+    .badge-danger {
+        background: var(--danger-color);
+        color: white;
+    }
+
+    .review-question {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+
+    .review-explanation {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: white;
+        border-radius: 5px;
+        color: var(--text-dark);
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string CourseId { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ChapterId { get; set; } = string.Empty;
+
+    private Quiz? quiz;
+    private Dictionary<int, int> userAnswers = new();
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private bool isSubmitted = false;
+    private int score = 0;
+    private int scorePercentage = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadQuiz();
+    }
+    private bool IsQuizSubmitDisabled()
+{
+    return userAnswers.Count < quiz!.Questions.Count || isSubmitting;
+}
+    private async Task LoadQuiz()
+    {
+        try
+        {
+            var request = new TcpRequest
+            {
+               RequestType = "GET_QUIZ",
+                Data = new { CourseId, ChapterId }
+            };
+
+            var response = await TcpClient.SendRequestAsync(request);
+
+            if (response.Success && response.Data != null)
+            {
+                quiz = Newtonsoft.Json.JsonConvert.DeserializeObject<Quiz>(response.Data.ToString() ?? "{}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[QUIZ ERROR] {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SelectAnswer(int questionIndex, int optionIndex)
+    {
+        if (isSubmitted) return;
+        userAnswers[questionIndex] = optionIndex;
+        StateHasChanged();
+    }
+
+    private async Task SubmitQuiz()
+    {
+        if (!AppState.IsLoggedIn)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        try
+        {
+            isSubmitting = true;
+
+            // Calculer le score
+            score = 0;
+            for (int i = 0; i < quiz!.Questions.Count; i++)
+            {
+                if (userAnswers[i] == quiz.Questions[i].CorrectAnswerIndex)
+                {
+                    score++;
+                }
+            }
+            scorePercentage = (int)((double)score / quiz.Questions.Count * 100);
+
+            // Envoyer au serveur
+            var request = new TcpRequest
+            {
+               RequestType = "SUBMIT_QUIZ",
+                Data = new
+                {
+                    UserId = AppState.GetCurrentUserId(),
+                    CourseId,
+                    ChapterId,
+                    QuizId = quiz.Id,
+                    Score = score,
+                    TotalQuestions = quiz.Questions.Count,
+                    UserAnswers = userAnswers.Select(ua => new
+                    {
+                        QuestionId = quiz.Questions[ua.Key].Id,
+                        SelectedAnswerIndex = ua.Value,
+                        IsCorrect = ua.Value == quiz.Questions[ua.Key].CorrectAnswerIndex
+                    }).ToList()
+                }
+            };
+
+            await TcpClient.SendRequestAsync(request);
+
+            isSubmitted = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SUBMIT QUIZ ERROR] {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void BackToChapter()
+    {
+        Navigation.NavigateTo($"/course/{CourseId}/chapter/{ChapterId}");
+    }
+
+    private void RetakeQuiz()
+    {
+        userAnswers.Clear();
+        isSubmitted = false;
+        score = 0;
+        scorePercentage = 0;
+        StateHasChanged();
+    }
+}
+                              

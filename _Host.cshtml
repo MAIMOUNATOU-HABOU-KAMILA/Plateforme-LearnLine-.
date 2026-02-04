@@ -1,0 +1,34 @@
+@page "/"
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LearnLine - Plateforme E-Learning</title>
+    <base href="~/" />
+    <link href="css/styles.css" rel="stylesheet" />
+    <link href="LearnLineClient.styles.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+</head>
+<body>
+    <component type="typeof(LearnLineClient.App)" render-mode="ServerPrerendered" />
+
+    <div id="blazor-error-ui">
+        <environment include="Staging,Production">
+            Une erreur s'est produite. Veuillez réessayer.
+        </environment>
+        <environment include="Development">
+            Une exception non gérée s'est produite. Voir les journaux pour plus de détails.
+        </environment>
+        <a href="" class="reload">Recharger</a>
+        <a class="dismiss">✖</a>
+    </div>
+
+    <script src="_framework/blazor.server.js"></script>
+</body>
+</html>
